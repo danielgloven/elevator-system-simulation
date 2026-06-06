@@ -1,0 +1,4 @@
+# The core simulation uses only the Python standard library.
+# These are for development and the optional visualization (added later).
+pytest>=7.0
+# matplotlib>=3.5   # uncomment for the optional --plot visualization (bonus)
