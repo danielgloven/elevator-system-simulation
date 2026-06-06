@@ -217,6 +217,13 @@ the "fairness vs efficiency" bonus and makes for a compelling demo.
 ## 7. Changelog of decisions
 
 * **v0.1 (first pass):** core engine, LOOK movement, `nearest_car` (default) +
-  `round_robin`, full stats + CSV outputs, test suite. Bonus schedulers,
-  express elevators, and matplotlib visualization intentionally deferred to keep
-  the first pass focused and working end-to-end.
+  `round_robin`, full stats + CSV outputs, test suite. Bonus schedulers and
+  express elevators intentionally deferred to keep the first pass focused and
+  working end-to-end.
+* **v0.2:** project moved to **uv** (`pyproject.toml`, dependency groups,
+  `elevator-sim` console script); core stays stdlib-only with matplotlib/pytest
+  as managed dev deps. Added **matplotlib visualizations** (`viz.py`, `--plot`):
+  elevator paths over time, per-passenger wait+travel stacked bars, and
+  wait/total histograms. The sample run surfaces a bimodal wait distribution
+  (lucky vs. mid-rush-starved passengers) — concrete fodder for the
+  fairness-vs-efficiency discussion. Bonus schedulers still pending.

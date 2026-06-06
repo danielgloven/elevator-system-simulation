@@ -13,14 +13,27 @@ elevator, then the fleet serves everyone while minimising time per passenger.
 
 ## How to Run
 
-Requires **Python 3.8+** (developed on 3.9). The core simulation has **no
-third-party dependencies**.
+The core simulation has **no third-party dependencies** and runs on **Python
+3.9+**. The project is managed with [uv](https://docs.astral.sh/uv/).
+
+### With uv (recommended)
 
 ```bash
-# Run with the bundled sample requests and sensible defaults
+uv sync                                   # create .venv + install dev deps
+uv run elevator-sim --requests data/requests.csv          # run
+uv run elevator-sim --requests data/requests.csv --plot   # run + charts
+uv run pytest -q                          # tests
+```
+
+`uv` provisions a compatible Python and the matplotlib/pytest dev dependencies
+automatically. The core sim needs nothing beyond the standard library; only the
+optional `--plot` charts require matplotlib.
+
+### Without uv (stdlib only, no plots)
+
+```bash
 python main.py --requests data/requests.csv
 
-# Configure the building and the scheduler
 python main.py \
     --requests data/requests.csv \
     --elevators 3 \
@@ -45,8 +58,7 @@ CLI options:
 ### Running the tests
 
 ```bash
-pip install -r requirements.txt   # installs pytest
-python -m pytest -q
+uv run pytest -q
 ```
 
 ## Input Format
@@ -79,6 +91,9 @@ Written to `--output-dir` (default `output/`, git-ignored):
 * **`summary.txt`** — the passenger summary statistics (also printed to stdout):
   min / max / average of **wait**, **travel**, and **total** time, plus
   observations (delivered count, run length, worst-case passengers).
+* **`*.png`** (with `--plot`) — `elevator_paths.png` (every car's floor over
+  time), `passenger_times.png` (stacked wait + travel per passenger), and
+  `time_distribution.png` (wait/total histograms).
 
 Example summary:
 
@@ -105,7 +120,8 @@ move* and *when things happen*:
 | `simulation.py`    | The discrete-time tick loop / engine                       |
 | `stats.py`         | Summary statistics + output writers                        |
 | `io_utils.py`      | Request CSV loading                                        |
-| `main.py`          | CLI wiring                                                 |
+| `viz.py`           | Optional matplotlib charts (lazy import)                   |
+| `cli.py`/`main.py` | CLI wiring (`elevator-sim` entrypoint + thin shim)        |
 
 **Time model.** Discrete ticks; one tick = one floor of travel. A stop costs
 one extra **dwell** tick during which passengers board/alight.
