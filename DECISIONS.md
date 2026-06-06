@@ -138,7 +138,63 @@ that turns an infinite-loop bug into a clear error instead of a hang.
 
 ---
 
-## 5. Assumptions & simplifications (the honest list)
+## 5. Reading the visualizations (talking points)
+
+Generated with `uv run elevator-sim --plot` on the bundled sample (3 elevators,
+51 floors, capacity 8, `nearest_car`). These are the points to walk through.
+
+### 5.1 `elevator_paths.png` — the "elevator diagram"
+
+Floor vs. time, one line per car. The whole run is legible at a glance:
+
+* All three cars **surge upward together** early on — five of the ten sample
+  passengers originate at floor 1 (a morning-lobby rush), so the scheduler
+  loads the lobby and sends everyone up.
+* They **peak around floors 45–51**, then **descend** to serve the down-traffic
+  (e.g. passenger3 20→1, passenger5 40→2, passenger9 51→1).
+* The **flat tails** at the end are cars parking after their final drop-off (no
+  remaining work → `IDLE`).
+* The tiny **stair-steps** in the lines are the 1-tick dwells at each stop.
+
+Talking point: this is literally the contents of `positions.csv` made visual —
+a good way to show the scheduler's macro behavior matches the traffic pattern.
+
+### 5.2 `passenger_times.png` — wait + travel, stacked, sorted by total
+
+Orange = wait, blue = travel; dashed line = average total (~82 ticks).
+
+* The orange-vs-blue split **is** the fairness-vs-efficiency story made concrete.
+* Passengers **6, 8, and 10 have huge wait components** — they requested
+  *mid-rush* (t=15, 22, 30) while all three cars were already committed upward,
+  so they sat until a car came back. That is the **known weakness of greedy
+  `nearest_car` with fixed assignment**: a request that arrives just after the
+  fleet commits elsewhere has no nearby car and can't be re-assigned.
+* Passengers near the left (e.g. passenger2, passenger1) have **near-zero wait**
+  — a car was already heading their way.
+
+Talking point: leads straight into "what I'd improve" — re-assignment when a
+closer car frees up, or a wait-aware cost term that penalizes leaving an old
+request stranded.
+
+### 5.3 `time_distribution.png` — wait & total histograms
+
+* The **wait histogram is bimodal**: a cluster near 0 (lucky passengers a car
+  was already approaching) and a second cluster at ~70–88 (the mid-rush starved
+  ones). Two populations, not one smooth spread.
+* Talking point: this is why **average alone is misleading** — avg wait ~32 hides
+  the fact that nobody actually waited ~32; people waited either ~5 or ~80. It
+  motivates reporting **tail/worst-case** metrics (max wait) alongside the mean,
+  and is exactly the fairness lever the bonus asks about.
+
+### 5.4 The one-sentence version
+
+"Greedy nearest-car is efficient on average but produces a **bimodal, unfair**
+wait distribution under bursty lobby traffic; the fix is re-assignment and a
+wait-aware cost term — which the pluggable scheduler interface is built to allow."
+
+---
+
+## 6. Assumptions & simplifications (the honest list)
 
 * Dwell is a flat 1 tick regardless of how many people move.
 * Boarding/alighting are instantaneous within the dwell tick.
@@ -152,7 +208,7 @@ that turns an infinite-loop bug into a clear error instead of a hang.
 
 ---
 
-## 6. Anticipated questions (and answers)
+## 7. Anticipated questions (and answers)
 
 **Q: Why discrete time instead of a continuous/event-driven simulation?**
 The brief mandates ticking one unit at a time and not peeking ahead, so discrete
@@ -214,7 +270,7 @@ the "fairness vs efficiency" bonus and makes for a compelling demo.
 
 ---
 
-## 7. Changelog of decisions
+## 8. Changelog of decisions
 
 * **v0.1 (first pass):** core engine, LOOK movement, `nearest_car` (default) +
   `round_robin`, full stats + CSV outputs, test suite. Bonus schedulers and
