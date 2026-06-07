@@ -1,9 +1,7 @@
-# Design Decisions & Interview Prep
+# Design Decisions
 
-This document records the interesting decisions behind the simulation, the
-trade-offs each one carries, and a set of likely follow-up questions with
-prepared answers. It's a study aid for the walkthrough — the README is the
-user-facing doc.
+This document records the interesting decisions behind the simulation and the
+trade-offs each one carries. The README is the user-facing doc.
 
 ---
 
@@ -110,7 +108,7 @@ For each car, estimate ticks-to-reach the passenger's source:
 
 The car with the lowest cost wins; assignment is then **final**.
 
-**The load-penalty tuning story (good talking point).** I first set the penalty
+**The load-penalty tuning story.** I first set the penalty
 to `0.5`. On a burst *lobby rush* (most requests originate at floor 1) that was
 pathological: the "nearest" car is the *same* car for everyone, and a 0.5 penalty
 never outweighed the floor-distance term, so the whole rush piled onto one car
@@ -214,10 +212,10 @@ that turns an infinite-loop bug into a clear error instead of a hang.
 
 ---
 
-## 5. Reading the visualizations (talking points)
+## 5. Reading the visualizations
 
 Generated with `uv run elevator-sim --plot` on the bundled sample (3 elevators,
-51 floors, capacity 8, `nearest_car`). These are the points to walk through.
+51 floors, capacity 8, `nearest_car`).
 
 ### 5.1 `elevator_paths.png` — the "elevator diagram"
 
@@ -232,8 +230,8 @@ Floor vs. time, one line per car. The whole run is legible at a glance:
   remaining work → `IDLE`).
 * The tiny **stair-steps** in the lines are the 1-tick dwells at each stop.
 
-Talking point: this is literally the contents of `positions.csv` made visual —
-a good way to show the scheduler's macro behavior matches the traffic pattern.
+This is literally the contents of `positions.csv` made visual — the scheduler's
+macro behavior matches the traffic pattern.
 
 ### 5.2 `passenger_times.png` — wait + travel, stacked, sorted by total
 
@@ -248,19 +246,18 @@ Orange = wait, blue = travel; dashed line = average total (~82 ticks).
 * Passengers near the left (e.g. passenger2, passenger1) have **near-zero wait**
   — a car was already heading their way.
 
-Talking point: leads straight into "what I'd improve" — re-assignment when a
-closer car frees up, or a wait-aware cost term that penalizes leaving an old
-request stranded.
+This leads straight into "what I'd improve" — re-assignment when a closer car
+frees up, or a wait-aware cost term that penalizes leaving an old request stranded.
 
 ### 5.3 `time_distribution.png` — wait & total histograms
 
 * The **wait histogram is bimodal**: a cluster near 0 (lucky passengers a car
   was already approaching) and a second cluster at ~70–88 (the mid-rush starved
   ones). Two populations, not one smooth spread.
-* Talking point: this is why **average alone is misleading** — avg wait ~32 hides
-  the fact that nobody actually waited ~32; people waited either ~5 or ~80. It
-  motivates reporting **tail/worst-case** metrics (max wait) alongside the mean,
-  and is exactly the fairness lever the bonus asks about.
+* This is why **average alone is misleading** — avg wait ~32 hides the fact that
+  nobody actually waited ~32; people waited either ~5 or ~80. It motivates
+  reporting **tail/worst-case** metrics (max wait) alongside the mean, and is
+  exactly the fairness lever the bonus asks about.
 
 ### 5.4 The one-sentence version
 
@@ -346,10 +343,10 @@ the "fairness vs efficiency" bonus and makes for a compelling demo.
 
 ---
 
-## 8. Engineering practices & tooling (talking points)
+## 8. Engineering practices & tooling
 
-These aren't asked by the brief, but they're the difference between "a script"
-and "a maintainable project," and worth being ready to discuss.
+These aren't required by the brief, but they're the difference between "a script"
+and "a maintainable project."
 
 * **uv** for environment + dependency management — fast, reproducible
   (`uv.lock` pins exact versions), and it provisions the right Python itself.
