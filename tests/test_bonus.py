@@ -3,6 +3,7 @@
 import pytest
 
 from elevator_sim.compare import compare_strategies, render_comparison
+from elevator_sim.io_utils import load_requests
 from elevator_sim.models import Elevator, Request
 from elevator_sim.scheduler import ZoneBasedScheduler, get_scheduler
 from elevator_sim.simulation import Simulation
@@ -114,6 +115,32 @@ def test_compare_strategies_runs_all():
 
 def test_get_scheduler_includes_zone_based():
     assert isinstance(get_scheduler("zone_based"), ZoneBasedScheduler)
+
+
+def test_best_strategy_depends_on_traffic_pattern():
+    """Executable proof of the headline finding (see DECISIONS.md §3.6).
+
+    Under a correlated lobby rush, blind round_robin spreading wins; under
+    spread-out inter-floor traffic, nearest_car's locality wins. Both data files
+    are committed and the engine is deterministic, so this is stable.
+    """
+    cfg = {"num_elevators": 3, "num_floors": 51, "capacity": 8}
+
+    rush = {
+        r.strategy: r
+        for r in compare_strategies(
+            load_requests("data/rush_hour.csv"), ["nearest_car", "round_robin"], **cfg
+        )
+    }
+    assert rush["round_robin"].avg_total < rush["nearest_car"].avg_total
+
+    inter = {
+        r.strategy: r
+        for r in compare_strategies(
+            load_requests("data/inter_floor.csv"), ["nearest_car", "round_robin"], **cfg
+        )
+    }
+    assert inter["nearest_car"].avg_total < inter["round_robin"].avg_total
 
 
 # --- CLI integration -----------------------------------------------------

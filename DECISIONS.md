@@ -165,27 +165,39 @@ stranded by an all-express fleet). Tested in `test_bonus.py`
 Run `uv run elevator-sim --requests data/rush_hour.csv --compare`. On the bundled
 31-passenger lobby-rush scenario (3 cars, 51 floors, capacity 8):
 
+**Scenario A — lobby rush** (`data/rush_hour.csv`): most origins at floor 1.
+
 | strategy      | avg wait | max wait | avg total | makespan |
 | ------------- | -------- | -------- | --------- | -------- |
 | `nearest_car` |   49.6   |   130    |   86.4    |   206    |
 | `round_robin` |   45.6   |    96    |   83.6    |   155    |
 | `zone_based`  |   96.5   |   235    |  134.3    |   318    |
 
-Talking points:
+**Scenario B — spread inter-floor traffic** (`data/inter_floor.csv`): origins and
+destinations uniform across all 51 floors.
+
+| strategy      | avg wait | max wait | avg total | makespan |
+| ------------- | -------- | -------- | --------- | -------- |
+| `nearest_car` |   30.5   |   108    |   66.3    |   177    |
+| `round_robin` |   40.7   |   103    |   80.1    |   167    |
+| `zone_based`  |   34.5   |   147    |   69.4    |   180    |
+
+**The headline: the two scenarios invert the ranking.** That's the whole point.
 
 * **Efficiency** = avg total; **fairness** = max wait (worst-served passenger).
-* `round_robin` wins *this* scenario on both — a great counter-intuitive result.
-  Under a near-uniform lobby rush, "spread blindly" is close to optimal because
-  every car is equally good (all pickups are at floor 1). Smart heuristics have
-  little signal to exploit and mostly add risk of imbalance.
-* `nearest_car` is competitive after the load-penalty tuning (§3.2); on *mixed*
-  traffic with varied origins it would pull ahead, because then "nearest" is
-  genuinely informative.
-* `zone_based` is worst here — the rush concentrates all origins in one zone.
-  This is the textbook zoning failure mode, and exactly the fairness/efficiency
-  trade-off the bonus asks us to explore.
-* General lesson: **the best scheduler depends on the traffic pattern.** A real
-  system would detect the pattern (e.g. up-peak vs. inter-floor) and switch.
+* **Lobby rush → `round_robin` wins** (counter-intuitively). When every origin is
+  floor 1, every car is equally good, so "spread blindly" is near-optimal and
+  greedy "nearest" only risks imbalance. `zone_based` is worst — the rush
+  concentrates all origins in one car's zone (textbook zoning failure).
+* **Inter-floor → `nearest_car` wins** (~17% lower avg total than `round_robin`),
+  and `zone_based` also beats `round_robin`. With origins spread out, "nearest" is
+  genuinely informative and zoning's locality finally pays off.
+* Note the nuance even in B: `round_robin` still has the tightest *makespan* and
+  *max_total* — blind spreading keeps the tail tight while losing on the average.
+* General lesson: **the best scheduler depends on the traffic pattern.** No policy
+  wins everywhere. A real system would detect the regime (up-peak vs. inter-floor
+  vs. down-peak) and switch — this is the single most compelling "what's next."
+* This finding is locked in by `test_best_strategy_depends_on_traffic_pattern`.
 
 ---
 
@@ -420,3 +432,7 @@ thing to be able to articulate: the future import is the bridge that decouples
   bundled `data/rush_hour.csv` lobby-rush scenario. Tuned `nearest_car`'s load
   penalty 0.5 → 2.0 after the rush exposed a pile-onto-one-car failure mode.
   Documented the fairness-vs-efficiency findings (§3.6). 34 tests, ~94% coverage.
+* **v0.6:** added a second scenario `data/inter_floor.csv` (spread traffic) that
+  **inverts** the strategy ranking vs. the lobby rush — concrete proof that the
+  best scheduler depends on traffic pattern. Added a regression test locking in
+  the contrast and a second comparison chart. No engine changes (data + docs).

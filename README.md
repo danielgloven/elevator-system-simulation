@@ -72,9 +72,11 @@ uv run elevator-sim --requests data/rush_hour.csv --num-express 1 --express-min-
 uv run elevator-sim --requests data/rush_hour.csv --strategy zone_based
 ```
 
-`data/rush_hour.csv` is a bundled lobby-rush scenario used for the strategy
-comparison. See [DECISIONS.md §3.6](DECISIONS.md) for the fairness-vs-efficiency
-findings.
+Two bundled scenarios drive the comparison: `data/rush_hour.csv` (a lobby rush)
+and `data/inter_floor.csv` (traffic spread across floors). They **invert the
+strategy ranking** — round-robin wins the rush, nearest-car wins inter-floor —
+which is the core fairness-vs-efficiency finding. See
+[DECISIONS.md §3.6](DECISIONS.md).
 
 ### Running the tests
 
@@ -171,12 +173,20 @@ the fairness-vs-efficiency story; mid-rush passengers wait far longer:
 
 ![Time distributions](docs/time_distribution.png)
 
-**Strategy comparison (fairness vs efficiency)** — every scheduler on the same
-lobby-rush scenario. `zone_based` is worst (the rush concentrates all origins in
-one zone); `round_robin`'s blind load-spreading is surprisingly strong under a
-uniform rush. Full analysis in [DECISIONS.md §3.6](DECISIONS.md):
+**Strategy comparison (fairness vs efficiency)** — every scheduler on two
+scenarios that **invert the ranking**. Under a lobby rush, `round_robin`'s blind
+load-spreading wins and `zone_based` is worst (all origins in one zone); under
+spread inter-floor traffic, `nearest_car` and `zone_based` pull ahead because
+locality finally helps. No strategy wins everywhere — full analysis in
+[DECISIONS.md §3.6](DECISIONS.md):
 
-![Strategy comparison](docs/strategy_comparison.png)
+Lobby rush:
+
+![Strategy comparison — lobby rush](docs/strategy_comparison.png)
+
+Spread inter-floor traffic:
+
+![Strategy comparison — inter-floor](docs/strategy_comparison_inter_floor.png)
 
 ## Design Overview
 
