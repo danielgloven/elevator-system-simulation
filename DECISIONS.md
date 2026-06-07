@@ -105,23 +105,87 @@ For each car, estimate ticks-to-reach the passenger's source:
 * **Source ahead** on the car's current direction: distance directly to it.
 * **Source behind** the car's direction: it must run out its current direction
   to its furthest committed stop, then come back — cost is that two-leg path.
-* Plus a small **load penalty** (`0.5 × (onboard + waiting)`) so a slightly
-  closer but overloaded car doesn't hoard every request.
+* Plus a **load penalty** (`2.0 × (onboard + waiting)`) so a slightly closer but
+  overloaded car doesn't hoard every request.
 
 The car with the lowest cost wins; assignment is then **final**.
 
-**Trade-off:** this is a cheap *estimate*, not a full route re-simulation. It can
-be fooled (e.g. it doesn't model how intermediate stops a car will accrue delay
-a later pickup). A higher-fidelity version would simulate inserting the new
-stops into each car's route and score the actual resulting times — more accurate,
-more expensive, and the natural next step.
+**The load-penalty tuning story (good talking point).** I first set the penalty
+to `0.5`. On a burst *lobby rush* (most requests originate at floor 1) that was
+pathological: the "nearest" car is the *same* car for everyone, and a 0.5 penalty
+never outweighed the floor-distance term, so the whole rush piled onto one car
+while the others idled — `round_robin` (which blindly spreads load) beat it
+soundly. Raising the penalty to **2.0** cut the rush scenario's average total
+time ~26% (117 → 86 ticks) and makespan from 291 → 206, with **no regression** on
+lighter scenarios. Lesson: greedy "nearest" needs a real load-balancing term
+once origins are correlated.
 
-### 3.3 `round_robin` baseline
+**Trade-off:** the cost is still a cheap *estimate*, not a full route
+re-simulation. A higher-fidelity version would simulate inserting the new stops
+into each car's route and score the actual resulting times — more accurate, more
+expensive, and the natural next step.
+
+### 3.3 `zone_based` scheduler (bonus)
+
+Split the building into contiguous bands, one per car; assign a request to the
+car whose zone owns its **source** floor (falling back to the nearest eligible
+zone if the owner is, e.g., an express car that can't serve the trip). The
+appeal is **locality** — a car stays near its zone, so it's usually close to its
+next pickup, and it's naturally fair *within* a zone.
+
+**Trade-off (and what the data shows):** zoning dies under **skewed demand**. In
+the lobby rush almost every request originates on floor 1, which lives in car 0's
+zone — so car 0 is slammed while cars 1–2 sit idle. It's the worst performer on
+that scenario by a wide margin (see §6). Zoning shines when demand is spread
+across floors (e.g. steady inter-floor traffic), not during a correlated rush.
+
+### 3.4 `round_robin` baseline
 
 Strict rotation, position-ignorant. It exists to (a) prove the interface is
-genuinely pluggable and (b) give a baseline. On the sample data `nearest_car`
-already beats it on average total time (~82 vs ~88 ticks), which is the kind of
-comparison the "fairness vs efficiency" bonus is about.
+genuinely pluggable and (b) give a baseline. Surprisingly, under a pure lobby
+rush its blind even-spreading is *hard to beat* — see the comparison in §3.6.
+
+### 3.5 Express elevators (bonus)
+
+An express car serves only a subset of floors — modeled as an optional
+`serviceable_floors` set on `Elevator` (`None` = serves everything). The CLI
+exposes a "sky-lobby" style: the last N cars serve the **lobby plus floors at or
+above `express_min_floor`**, skipping the low/mid floors.
+
+**Key design choice — feasibility lives in the engine, not the scheduler.** The
+tick loop filters the fleet to cars that can serve a given request *before*
+calling the scheduler, so every scheduler automatically respects express
+constraints and none of them needed to change. We also require **≥ 1 standard
+car**, which guarantees every request is always serviceable (no passenger can be
+stranded by an all-express fleet). Tested in `test_bonus.py`
+(`test_express_serves_everyone_and_respects_constraints`).
+
+### 3.6 Strategy comparison results (fairness vs efficiency)
+
+Run `uv run elevator-sim --requests data/rush_hour.csv --compare`. On the bundled
+31-passenger lobby-rush scenario (3 cars, 51 floors, capacity 8):
+
+| strategy      | avg wait | max wait | avg total | makespan |
+| ------------- | -------- | -------- | --------- | -------- |
+| `nearest_car` |   49.6   |   130    |   86.4    |   206    |
+| `round_robin` |   45.6   |    96    |   83.6    |   155    |
+| `zone_based`  |   96.5   |   235    |  134.3    |   318    |
+
+Talking points:
+
+* **Efficiency** = avg total; **fairness** = max wait (worst-served passenger).
+* `round_robin` wins *this* scenario on both — a great counter-intuitive result.
+  Under a near-uniform lobby rush, "spread blindly" is close to optimal because
+  every car is equally good (all pickups are at floor 1). Smart heuristics have
+  little signal to exploit and mostly add risk of imbalance.
+* `nearest_car` is competitive after the load-penalty tuning (§3.2); on *mixed*
+  traffic with varied origins it would pull ahead, because then "nearest" is
+  genuinely informative.
+* `zone_based` is worst here — the rush concentrates all origins in one zone.
+  This is the textbook zoning failure mode, and exactly the fairness/efficiency
+  trade-off the bonus asks us to explore.
+* General lesson: **the best scheduler depends on the traffic pattern.** A real
+  system would detect the pattern (e.g. up-peak vs. inter-floor) and switch.
 
 ---
 
@@ -282,8 +346,8 @@ and "a maintainable project," and worth being ready to discuss.
   file happens to be in the cwd" bugs.
 * **Ruff** for linting + formatting — one fast tool replacing black + flake8 +
   isort. Enforces style and catches bug-prone patterns (bugbear, comprehensions).
-* **pytest + coverage** — 21 tests, coverage gated at **85%** in
-  `pyproject.toml` (currently ~95%). The gate means new untested code fails CI,
+* **pytest + coverage** — 34 tests, coverage gated at **85%** in
+  `pyproject.toml` (currently ~94%). The gate means new untested code fails CI,
   not just looks bad in a report. `viz.py` is excluded from the gate (it's
   exercised by the smoke run, and asserting on pixels is low-value).
 * **mypy** static type checking — verifies the type hints throughout the code
@@ -350,3 +414,9 @@ thing to be able to articulate: the future import is the bridge that decouples
   narrowed to 3.12–3.13. Added **mypy** type checking (CI + pre-commit) and an
   **MIT LICENSE**. Committed **sample charts in `docs/`** so they render on the
   GitHub page (kept in sync with `viz.py` output). Bonus schedulers still pending.
+* **v0.5 (bonuses):** added the **`zone_based`** scheduler and **express
+  elevators** (engine-enforced feasibility, sky-lobby model). New **comparison
+  harness** (`compare.py`, `--compare`) + grouped-bar comparison chart, plus a
+  bundled `data/rush_hour.csv` lobby-rush scenario. Tuned `nearest_car`'s load
+  penalty 0.5 → 2.0 after the rush exposed a pile-onto-one-car failure mode.
+  Documented the fairness-vs-efficiency findings (§3.6). 34 tests, ~94% coverage.

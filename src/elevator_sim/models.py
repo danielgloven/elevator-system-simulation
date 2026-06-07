@@ -134,6 +134,10 @@ class Elevator:
     current_floor: int = 0
     direction: Direction = Direction.IDLE
 
+    # Express elevators serve only a subset of floors (e.g. lobby + high floors,
+    # skipping the rest). ``None`` means a standard car that serves every floor.
+    serviceable_floors: frozenset[int] | None = None
+
     # Passengers physically aboard the car.
     onboard: list[Passenger] = field(default_factory=list)
     # Passengers assigned to this car but still waiting at their source floor.
@@ -148,6 +152,18 @@ class Elevator:
     @property
     def is_full(self) -> bool:
         return self.load >= self.capacity
+
+    @property
+    def is_express(self) -> bool:
+        return self.serviceable_floors is not None
+
+    def can_serve(self, floor: int) -> bool:
+        """Whether this car is allowed to stop at ``floor``."""
+        return self.serviceable_floors is None or floor in self.serviceable_floors
+
+    def can_serve_request(self, request: Request) -> bool:
+        """Whether this car can both pick up and drop off ``request``."""
+        return self.can_serve(request.source) and self.can_serve(request.dest)
 
     def has_work(self) -> bool:
         return bool(self.onboard or self.waiting)

@@ -51,9 +51,30 @@ CLI options:
 | `--elevators`    | `3`                | Number of elevator cars                   |
 | `--floors`       | `51`               | Number of floors (1-indexed, ground = 1)  |
 | `--capacity`     | `8`                | Max simultaneous passengers per car       |
-| `--strategy`     | `nearest_car`      | `nearest_car` or `round_robin`            |
+| `--strategy`     | `nearest_car`      | `nearest_car`, `zone_based`, or `round_robin` |
 | `--start-floor`  | `1`                | Floor every car starts on                 |
+| `--num-express`  | `0`                | Make the last N cars express (needs < #elevators) |
+| `--express-min-floor` | `None`        | Lowest non-lobby floor express cars serve |
 | `--output-dir`   | `output`           | Where logs/summary are written            |
+| `--plot`         | off                | Also write matplotlib charts              |
+| `--compare`      | off                | Run every strategy and print a comparison table |
+
+### Bonus features
+
+```bash
+# Compare every scheduling strategy on the same scenario
+uv run elevator-sim --requests data/rush_hour.csv --compare --plot
+
+# Express elevators: make 1 of 3 cars serve only the lobby + floors >= 26
+uv run elevator-sim --requests data/rush_hour.csv --num-express 1 --express-min-floor 26
+
+# Zone-based scheduling
+uv run elevator-sim --requests data/rush_hour.csv --strategy zone_based
+```
+
+`data/rush_hour.csv` is a bundled lobby-rush scenario used for the strategy
+comparison. See [DECISIONS.md §3.6](DECISIONS.md) for the fairness-vs-efficiency
+findings.
 
 ### Running the tests
 
@@ -150,6 +171,13 @@ the fairness-vs-efficiency story; mid-rush passengers wait far longer:
 
 ![Time distributions](docs/time_distribution.png)
 
+**Strategy comparison (fairness vs efficiency)** — every scheduler on the same
+lobby-rush scenario. `zone_based` is worst (the rush concentrates all origins in
+one zone); `round_robin`'s blind load-spreading is surprisingly strong under a
+uniform rush. Full analysis in [DECISIONS.md §3.6](DECISIONS.md):
+
+![Strategy comparison](docs/strategy_comparison.png)
+
 ## Design Overview
 
 The code is split so that *what gets decided* is separate from *how the cars
@@ -162,6 +190,7 @@ move* and *when things happen*:
 | `simulation.py`    | The discrete-time tick loop / engine                       |
 | `stats.py`         | Summary statistics + output writers                        |
 | `io_utils.py`      | Request CSV loading                                        |
+| `compare.py`       | Run strategies head-to-head and tabulate metrics          |
 | `viz.py`           | Optional matplotlib charts (lazy import)                   |
 | `cli.py`/`main.py` | CLI wiring (`elevator-sim` entrypoint + thin shim)        |
 
@@ -178,10 +207,16 @@ ahead. A car's stops are the destinations of its onboard passengers plus the
 source floors of passengers assigned to it but not yet aboard.
 
 **Scheduling.** The default `nearest_car` strategy assigns each request to the
-car that can reach the pickup floor soonest (direction-aware), with a light
-load-balancing penalty so work spreads across the fleet. `round_robin` is a
-naive baseline. New strategies implement one method and register themselves —
-the engine never changes.
+car that can reach the pickup floor soonest (direction-aware), with a
+load-balancing penalty so work spreads across the fleet. `zone_based` assigns by
+which floor-band owns the source; `round_robin` is a naive baseline. New
+strategies implement one method and register themselves — the engine never
+changes.
+
+**Express elevators.** Cars can be restricted to a subset of floors. The engine
+filters the fleet to cars that can serve a request *before* the scheduler
+chooses, so express constraints are honored without any scheduler changes (and a
+standard car is always required, so no passenger can be stranded).
 
 See **[DECISIONS.md](DECISIONS.md)** for the full reasoning, trade-offs, and a
 walkthrough of likely follow-up questions.
@@ -198,6 +233,8 @@ A short list (full detail in DECISIONS.md):
 * If a car arrives at a pickup while **full**, the waiting passenger stays
   assigned and is collected on a later pass — never dropped.
 * The `nearest_car` cost is a cheap **estimate**, not a full route re-simulation.
+* **Express** elevators use a fixed "sky-lobby" pattern (lobby + floors ≥ a
+  threshold); a standard car is always required so every request is serviceable.
 
 ## Time Spent
 
@@ -205,12 +242,15 @@ _~__ hours_ (to be filled in).
 
 ## What I'd Improve With More Time
 
-* **Bonus schedulers**: zone-based dispatch and express elevators (the
-  architecture already supports dropping these in).
-* **Visualization**: matplotlib charts (wait-time distribution, elevator paths
-  over time) for the presentation.
+Already implemented: zone-based + express schedulers, matplotlib visualizations,
+and a strategy comparison harness. With more time:
+
 * **Smarter dispatch**: cost based on a real route re-simulation, and optional
   re-assignment when a much closer car frees up.
+* **Adaptive scheduling**: detect the traffic pattern (up-peak vs. inter-floor)
+  and switch strategy accordingly — the comparison shows no single strategy wins
+  everywhere.
 * **Richer realism**: per-floor dwell proportional to people moved, idle-car
-  "parking" heuristics, and a fairness-vs-efficiency tuning knob.
-* A scenario generator + batch comparison harness to benchmark strategies.
+  "parking" heuristics, and a tunable fairness-vs-efficiency weight.
+* **Express tuning**: configurable per-car serviceable-floor sets (not just the
+  sky-lobby pattern) and zone-aware express placement.

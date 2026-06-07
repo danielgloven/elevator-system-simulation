@@ -116,6 +116,44 @@ def plot_wait_distribution(result: SimulationResult, path: str) -> str:
     return path
 
 
+def plot_strategy_comparison(rows: list, path: str) -> str:
+    """Grouped bars comparing strategies on fairness vs efficiency metrics.
+
+    ``rows`` is a list of :class:`elevator_sim.compare.StrategyMetrics`.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    _ensure_dir(path)
+    names = [r.strategy for r in rows]
+    series = [
+        ("avg wait", [r.avg_wait for r in rows], "#e07a5f"),
+        ("max wait (fairness)", [r.max_wait for r in rows], "#f2cc8f"),
+        ("avg total (efficiency)", [r.avg_total for r in rows], "#3d5a80"),
+    ]
+    n = len(names)
+    group_width = 0.8
+    bar_width = group_width / len(series)
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    for idx, (label, values, color) in enumerate(series):
+        offsets = [i - group_width / 2 + bar_width * (idx + 0.5) for i in range(n)]
+        ax.bar(offsets, values, width=bar_width, label=label, color=color)
+
+    ax.set_title("Scheduler comparison: fairness vs efficiency (lower is better)")
+    ax.set_ylabel("ticks")
+    ax.set_xticks(range(n))
+    ax.set_xticklabels(names)
+    ax.grid(True, axis="y", alpha=0.25)
+    ax.legend(loc="upper right")
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
 def render_all(result: SimulationResult, output_dir: str) -> list[str]:
     """Write every chart into ``output_dir`` and return the paths written."""
     return [

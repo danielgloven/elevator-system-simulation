@@ -46,6 +46,8 @@ class Simulation:
         capacity: int = 8,
         scheduler: Scheduler | None = None,
         start_floor: int = 1,
+        num_express: int = 0,
+        express_min_floor: int | None = None,
         max_ticks: int | None = None,
     ) -> None:
         if num_elevators < 1:
@@ -56,6 +58,10 @@ class Simulation:
             raise ValueError("capacity must be >= 1")
         if not (1 <= start_floor <= num_floors):
             raise ValueError(f"start_floor must be in [1, {num_floors}]")
+        if num_express < 0:
+            raise ValueError("num_express must be >= 0")
+        if num_express >= num_elevators:
+            raise ValueError("num_express must be < num_elevators (need >=1 standard car)")
 
         # Floors are 1-indexed (ground == 1), matching the building convention
         # and the sample data (floors up to 51).
@@ -76,10 +82,23 @@ class Simulation:
         self.capacity = capacity
         self.scheduler = scheduler
 
+        # Express cars: the last ``num_express`` of the fleet serve only the
+        # lobby (start_floor) plus floors at/above ``express_min_floor``. We
+        # require at least one standard car so every request is always feasible.
+        express_floors = self._build_express_floors(
+            num_express, express_min_floor, num_floors, start_floor
+        )
         self.elevators: list[Elevator] = [
-            Elevator(id=i, capacity=capacity, current_floor=start_floor)
+            Elevator(
+                id=i,
+                capacity=capacity,
+                current_floor=start_floor,
+                serviceable_floors=express_floors if i >= num_elevators - num_express else None,
+            )
             for i in range(num_elevators)
         ]
+
+        self.scheduler.setup(num_floors, num_elevators)
 
         # Group requests by release tick so we never inspect future requests.
         self._by_time: dict[int, list[Request]] = defaultdict(list)
@@ -95,6 +114,21 @@ class Simulation:
 
         self.passengers: list[Passenger] = []
         self.positions: list[list[int]] = []
+
+    @staticmethod
+    def _build_express_floors(
+        num_express: int, express_min_floor: int | None, num_floors: int, start_floor: int
+    ) -> frozenset[int] | None:
+        """Validate express config and return the floors express cars serve."""
+        if num_express <= 0:
+            return None
+        if express_min_floor is None:
+            raise ValueError("express_min_floor is required when num_express > 0")
+        if not (2 <= express_min_floor <= num_floors):
+            raise ValueError(f"express_min_floor must be in [2, {num_floors}]")
+        # Keep at least one standard car so every request stays feasible.
+        served = {start_floor, *range(express_min_floor, num_floors + 1)}
+        return frozenset(served)
 
     # ------------------------------------------------------------------
 
@@ -127,10 +161,21 @@ class Simulation:
     # ------------------------------------------------------------------
 
     def _release(self, t: int) -> None:
-        """Admit requests timestamped for tick ``t`` and assign each a car."""
+        """Admit requests timestamped for tick ``t`` and assign each a car.
+
+        Express elevators are filtered out here when they cannot serve the
+        request's source or destination, so the scheduler only ever chooses
+        among feasible cars.
+        """
         for request in self._by_time.get(t, ()):
             passenger = Passenger(request=request)
-            car_id = self.scheduler.assign(passenger, self.elevators, t)
+            feasible = [e for e in self.elevators if e.can_serve_request(request)]
+            if not feasible:
+                raise ValueError(
+                    f"request {request.id} ({request.source}->{request.dest}) "
+                    "cannot be served by any elevator"
+                )
+            car_id = self.scheduler.assign(passenger, feasible, t)
             passenger.assigned_elevator = car_id
             self.elevators[car_id].waiting.append(passenger)
             self.passengers.append(passenger)
