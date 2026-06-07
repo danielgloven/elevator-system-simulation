@@ -16,6 +16,17 @@ repos:
         additional_dependencies: ["bandit[toml]"]
         pass_filenames: false
 
+  # mypy as a local hook so it uses the project's pinned version via uv
+  # (avoids the isolated-env / stub-dependency issues of mirrors-mypy).
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

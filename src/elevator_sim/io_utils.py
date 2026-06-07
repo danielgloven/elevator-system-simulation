@@ -1,7 +1,5 @@
 """Reading the request CSV input."""
 
-from __future__ import annotations
-
 import csv
 
 from .models import Request

@@ -9,11 +9,10 @@ or directly:
     python main.py --requests data/requests.csv --plot
 """
 
-from __future__ import annotations
-
 import argparse
 import os
 import sys
+from collections.abc import Sequence
 
 from .io_utils import load_requests
 from .scheduler import SCHEDULERS, get_scheduler
@@ -26,7 +25,7 @@ from .stats import (
 )
 
 
-def parse_args(argv=None) -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Elevator system simulation")
     parser.add_argument(
         "--requests",
@@ -58,7 +57,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv=None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
 
     requests = load_requests(args.requests)

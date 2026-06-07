@@ -14,7 +14,7 @@ elevator, then the fleet serves everyone while minimising time per passenger.
 ## How to Run
 
 The core simulation has **no third-party dependencies** and runs on **Python
-3.9+**. The project is managed with [uv](https://docs.astral.sh/uv/).
+3.12+**. The project is managed with [uv](https://docs.astral.sh/uv/).
 
 ### With uv (recommended)
 
@@ -66,6 +66,7 @@ uv run pytest -q
 ```bash
 uv run ruff check .            # lint
 uv run ruff format .           # auto-format
+uv run mypy                    # static type check
 uv run pytest -q               # tests + coverage (gated at 85%)
 uv run bandit -c pyproject.toml -r src   # security scan (code)
 uv run pip-audit               # security scan (dependencies)
@@ -73,7 +74,14 @@ uv run pre-commit install      # run the above automatically on each commit
 ```
 
 Continuous integration (GitHub Actions) runs the test suite across Python
-3.9–3.12 plus a lint + security job on every push.
+3.12–3.13 plus a lint + type-check + security job on every push.
+
+To refresh the committed sample charts in `docs/` after changing chart code:
+
+```bash
+uv run elevator-sim --plot --output-dir output
+cp output/*.png docs/
+```
 
 ## Input Format
 
@@ -121,6 +129,26 @@ total_time   min=  37  max= 135  avg=  82.10  (n=10)
 Passengers delivered : 10 / 10
 Simulation length    : 158 ticks
 ```
+
+## Visualizations
+
+Generated with `--plot` (sample run: 3 elevators, 51 floors, capacity 8,
+`nearest_car`). These committed samples live in `docs/`.
+
+**Elevator positions over time** — the morning floor-1 rush up, the peak, and
+the descent to serve down-traffic:
+
+![Elevator positions over time](docs/elevator_paths.png)
+
+**Per-passenger wait + travel** — the orange (wait) vs. blue (travel) split is
+the fairness-vs-efficiency story; mid-rush passengers wait far longer:
+
+![Per-passenger time](docs/passenger_times.png)
+
+**Wait & total time distributions** — note the bimodal wait distribution
+(passengers a car was already approaching vs. those starved during the rush):
+
+![Time distributions](docs/time_distribution.png)
 
 ## Design Overview
 

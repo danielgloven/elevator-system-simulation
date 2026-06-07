@@ -16,8 +16,6 @@ Design notes (see DECISIONS.md for the full reasoning):
   request time, and the assignment to a car is fixed once made.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from enum import IntEnum
 

@@ -286,37 +286,43 @@ and "a maintainable project," and worth being ready to discuss.
   `pyproject.toml` (currently ~95%). The gate means new untested code fails CI,
   not just looks bad in a report. `viz.py` is excluded from the gate (it's
   exercised by the smoke run, and asserting on pixels is low-value).
+* **mypy** static type checking — verifies the type hints throughout the code
+  (config in `pyproject.toml`, matplotlib's missing stubs ignored). Catches a
+  class of bugs before runtime. Runs in CI and pre-commit.
 * **Security scanning** — two complementary tools: **bandit** (SAST over our own
   code, looking for insecure patterns) and **pip-audit** (checks dependencies
   against the CVE advisory DB). Both run in CI and as pre-commit hooks.
-* **GitHub Actions CI** — a `test` matrix across **Python 3.9–3.12** (this is
-  what actually proves the 3.9 floor we claim — see the `from __future__`
-  decision below) plus a `quality` job (ruff + bandit + pip-audit). Green checks
-  show on the public repo before anyone reads the code.
-* **pre-commit hooks** — ruff/bandit/whitespace run automatically before each
-  commit, so the same gates that run in CI run locally first. Fast feedback,
+* **GitHub Actions CI** — a `test` matrix across **Python 3.12–3.13** plus a
+  `quality` job (ruff + mypy + bandit + pip-audit). Green checks show on the
+  public repo before anyone reads the code.
+* **pre-commit hooks** — ruff/mypy/bandit/whitespace run automatically before
+  each commit, so the same gates that run in CI run locally first. Fast feedback,
   nothing broken ever gets pushed.
+* **MIT LICENSE** — explicit permissive license, expected on a public repo that's
+  meant to be cloned and run.
 
-### Why `from __future__ import annotations` is in every module
+### Python version: 3.12 floor (and why we *removed* `from __future__ import annotations`)
 
-This makes all type annotations **lazy** — Python stores them as strings instead
-of evaluating them at import time (PEP 563). Two concrete payoffs here:
+Earlier the project declared a 3.9 floor and carried `from __future__ import
+annotations` in every module. That import makes annotations **lazy** (stored as
+strings, PEP 563), which let the modern `list[int]` / `int | None` hint syntax
+(PEP 585 / 604) run on Python 3.9 even though that syntax otherwise needs 3.10+.
 
-1. **Modern syntax on an old Python.** Ruff rewrote the hints to the modern
-   `list[int]` / `int | None` style (PEP 585 / 604). Evaluating that syntax at
-   runtime requires Python 3.10+. Because the future import turns annotations
-   into strings, they're never evaluated — so the modern syntax runs fine on our
-   declared floor of **Python 3.9**. It's what lets us have modern-looking code
-   *and* broad compatibility at the same time (the CI matrix proves it).
-2. **Forward references for free** — a function can reference a type defined
-   later in the file without quoting it, and there's a tiny import-time speedup
-   since annotations aren't constructed.
+We then chose to **bump the floor to Python 3.12** and drop the future imports.
+Rationale:
 
-Trade-off: if we ever did runtime introspection of annotations (e.g. a
-serializer using `get_type_hints`), we'd need to resolve the strings. We don't,
-so this is pure upside. The alternative would be to bump the project to
-Python 3.10+ and drop the imports — but supporting 3.9 costs nothing here and is
-more portable for whoever runs the takehome.
+* uv already runs us on 3.12, and there's no requirement to support older
+  Pythons for this project — so the portability the future import bought us
+  wasn't worth carrying.
+* On 3.12 the modern hint syntax is **native**, so the imports became pure
+  boilerplate. Removing them is less code and one fewer thing to explain.
+* 3.12 is current and well-supported by all our deps.
+
+Trade-off: the code no longer runs on 3.9–3.11. That's an explicit, acceptable
+choice here. If broad compatibility were a goal, the alternative is exactly what
+we had before — keep `requires-python = ">=3.9"` and the future imports. (Good
+thing to be able to articulate: the future import is the bridge that decouples
+"modern annotation syntax" from "minimum Python version.")
 
 ---
 
@@ -339,3 +345,8 @@ more portable for whoever runs the takehome.
   CLI to lift coverage to ~95%. Modernized type-hint syntax (kept
   `from __future__ import annotations` so it still runs on 3.9). Bonus schedulers
   still pending.
+* **v0.4:** **bumped the Python floor to 3.12** and removed all
+  `from __future__ import annotations` (native modern syntax on 3.12); CI matrix
+  narrowed to 3.12–3.13. Added **mypy** type checking (CI + pre-commit) and an
+  **MIT LICENSE**. Committed **sample charts in `docs/`** so they render on the
+  GitHub page (kept in sync with `viz.py` output). Bonus schedulers still pending.

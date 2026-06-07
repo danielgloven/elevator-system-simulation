@@ -18,8 +18,6 @@ First-pass strategies:
   compare against in the write-up.
 """
 
-from __future__ import annotations
-
 from .models import Direction, Elevator, Passenger
 
 

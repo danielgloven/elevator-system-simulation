@@ -14,8 +14,6 @@ LOOK route always retains unserved stops - guarantees the brief's first
 objective: no passenger waits forever.
 """
 
-from __future__ import annotations
-
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass

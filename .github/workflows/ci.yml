@@ -12,8 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Prove the declared Python floor (3.9) really works, up to current.
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        # Declared floor is 3.12; also smoke-test the next minor.
+        python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -39,6 +39,8 @@ jobs:
         run: |
           uv run ruff check .
           uv run ruff format --check .
+      - name: Type check (mypy)
+        run: uv run mypy
       - name: Security - bandit (code)
         run: uv run bandit -c pyproject.toml -r src
       - name: Security - pip-audit (dependencies)

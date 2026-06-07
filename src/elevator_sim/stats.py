@@ -1,7 +1,5 @@
 """Summary statistics and output writers for a finished simulation."""
 
-from __future__ import annotations
-
 import csv
 import os
 from dataclasses import dataclass

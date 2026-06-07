@@ -5,8 +5,6 @@ dependency. matplotlib is imported lazily inside each function, so importing
 this module never fails even when matplotlib isn't installed.
 """
 
-from __future__ import annotations
-
 import os
 
 from .simulation import SimulationResult
