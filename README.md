@@ -238,7 +238,7 @@ A short list (full detail in DECISIONS.md):
 
 ## Time Spent
 
-_~__ hours_ (to be filled in).
+~2 hours.
 
 ## What I'd Improve With More Time
 
