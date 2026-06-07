@@ -182,11 +182,15 @@ locality finally helps. No strategy wins everywhere — full analysis in
 
 Lobby rush:
 
-![Strategy comparison — lobby rush](docs/strategy_comparison.png)
+![Strategy comparison — lobby rush](docs/strategy_comparison_rush_hour.png)
 
 Spread inter-floor traffic:
 
 ![Strategy comparison — inter-floor](docs/strategy_comparison_inter_floor.png)
+
+Sample requests:
+
+![Strategy comparison — sample requests](docs/strategy_comparison_requests.png)
 
 ## Design Overview
 

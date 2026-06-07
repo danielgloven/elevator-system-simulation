@@ -100,12 +100,28 @@ def plot_wait_distribution(result: SimulationResult, path: str) -> str:
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     ax1.hist(waits, bins="auto", color="#e07a5f", edgecolor="white")
+    if waits:
+        mean_wait = sum(waits) / len(waits)
+        ax1.axvline(
+            mean_wait, color="#333", linestyle="--", linewidth=1.2, label=f"mean = {mean_wait:.0f}"
+        )
+        ax1.legend(fontsize=8)
     ax1.set_title("Wait time distribution")
     ax1.set_xlabel("wait (ticks)")
     ax1.set_ylabel("passengers")
     ax1.grid(True, axis="y", alpha=0.25)
 
     ax2.hist(totals, bins="auto", color="#3d5a80", edgecolor="white")
+    if totals:
+        mean_total = sum(totals) / len(totals)
+        ax2.axvline(
+            mean_total,
+            color="#333",
+            linestyle="--",
+            linewidth=1.2,
+            label=f"mean = {mean_total:.0f}",
+        )
+        ax2.legend(fontsize=8)
     ax2.set_title("Total time distribution")
     ax2.set_xlabel("total (ticks)")
     ax2.grid(True, axis="y", alpha=0.25)
@@ -116,10 +132,11 @@ def plot_wait_distribution(result: SimulationResult, path: str) -> str:
     return path
 
 
-def plot_strategy_comparison(rows: list, path: str) -> str:
+def plot_strategy_comparison(rows: list, path: str, scenario: str = "") -> str:
     """Grouped bars comparing strategies on fairness vs efficiency metrics.
 
     ``rows`` is a list of :class:`elevator_sim.compare.StrategyMetrics`.
+    ``scenario`` is an optional human-readable label included in the chart title.
     """
     import matplotlib
 
@@ -127,25 +144,39 @@ def plot_strategy_comparison(rows: list, path: str) -> str:
     import matplotlib.pyplot as plt
 
     _ensure_dir(path)
-    names = [r.strategy for r in rows]
+    pretty_names = [r.strategy.replace("_", " ").title() for r in rows]
     series = [
         ("avg wait", [r.avg_wait for r in rows], "#e07a5f"),
         ("max wait (fairness)", [r.max_wait for r in rows], "#f2cc8f"),
         ("avg total (efficiency)", [r.avg_total for r in rows], "#3d5a80"),
     ]
-    n = len(names)
+    n = len(pretty_names)
     group_width = 0.8
     bar_width = group_width / len(series)
 
     fig, ax = plt.subplots(figsize=(11, 6))
     for idx, (label, values, color) in enumerate(series):
         offsets = [i - group_width / 2 + bar_width * (idx + 0.5) for i in range(n)]
-        ax.bar(offsets, values, width=bar_width, label=label, color=color)
+        bars = ax.bar(offsets, values, width=bar_width, label=label, color=color)
+        for bar in bars:
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.5,
+                f"{bar.get_height():.0f}",
+                ha="center",
+                va="bottom",
+                fontsize=7,
+            )
 
-    ax.set_title("Scheduler comparison: fairness vs efficiency (lower is better)")
+    title = (
+        f"Scheduler comparison — {scenario}: fairness vs efficiency (lower is better)"
+        if scenario
+        else "Scheduler comparison: fairness vs efficiency (lower is better)"
+    )
+    ax.set_title(title)
     ax.set_ylabel("ticks")
     ax.set_xticks(range(n))
-    ax.set_xticklabels(names)
+    ax.set_xticklabels(pretty_names)
     ax.grid(True, axis="y", alpha=0.25)
     ax.legend(loc="upper right")
     fig.tight_layout()

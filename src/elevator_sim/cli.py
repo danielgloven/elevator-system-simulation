@@ -94,8 +94,13 @@ def _run_comparison(requests: list[Request], args: argparse.Namespace, common: d
         except ImportError:
             print("\nmatplotlib not available; install with: uv sync --extra viz", file=sys.stderr)
             return 1
+        scenario_slug = os.path.splitext(os.path.basename(args.requests))[0]
+        scenario_label = scenario_slug.replace("_", " ").title()
+        chart_name = f"strategy_comparison_{scenario_slug}.png"
         chart = plot_strategy_comparison(
-            rows, os.path.join(args.output_dir, "strategy_comparison.png")
+            rows,
+            os.path.join(args.output_dir, chart_name),
+            scenario=scenario_label,
         )
         print(f"Wrote {chart}")
     return 0
