@@ -17,10 +17,10 @@ objective: no passenger waits forever.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
 
-from .models import Direction, Elevator, Passenger, Request
+from .models import Elevator, Passenger, Request
 from .scheduler import Scheduler
 
 
@@ -28,9 +28,9 @@ from .scheduler import Scheduler
 class SimulationResult:
     """Everything an analysis or report needs after a run."""
 
-    passengers: List[Passenger]
+    passengers: list[Passenger]
     #: positions[t][i] == floor of elevator i at tick t.
-    positions: List[List[int]]
+    positions: list[list[int]]
     num_elevators: int
     num_floors: int
     capacity: int
@@ -46,9 +46,9 @@ class Simulation:
         num_elevators: int = 3,
         num_floors: int = 10,
         capacity: int = 8,
-        scheduler: Optional[Scheduler] = None,
+        scheduler: Scheduler | None = None,
         start_floor: int = 1,
-        max_ticks: Optional[int] = None,
+        max_ticks: int | None = None,
     ) -> None:
         if num_elevators < 1:
             raise ValueError("num_elevators must be >= 1")
@@ -78,13 +78,13 @@ class Simulation:
         self.capacity = capacity
         self.scheduler = scheduler
 
-        self.elevators: List[Elevator] = [
+        self.elevators: list[Elevator] = [
             Elevator(id=i, capacity=capacity, current_floor=start_floor)
             for i in range(num_elevators)
         ]
 
         # Group requests by release tick so we never inspect future requests.
-        self._by_time: Dict[int, List[Request]] = defaultdict(list)
+        self._by_time: dict[int, list[Request]] = defaultdict(list)
         for r in requests:
             self._by_time[r.time].append(r)
         self._last_request_tick = max((r.time for r in requests), default=0)
@@ -95,8 +95,8 @@ class Simulation:
             self._last_request_tick + 4 * num_floors * (self._total + 1) + 1000
         )
 
-        self.passengers: List[Passenger] = []
-        self.positions: List[List[int]] = []
+        self.passengers: list[Passenger] = []
+        self.positions: list[list[int]] = []
 
     # ------------------------------------------------------------------
 

@@ -270,7 +270,57 @@ the "fairness vs efficiency" bonus and makes for a compelling demo.
 
 ---
 
-## 8. Changelog of decisions
+## 8. Engineering practices & tooling (talking points)
+
+These aren't asked by the brief, but they're the difference between "a script"
+and "a maintainable project," and worth being ready to discuss.
+
+* **uv** for environment + dependency management — fast, reproducible
+  (`uv.lock` pins exact versions), and it provisions the right Python itself.
+* **src/ layout** — the package lives under `src/elevator_sim/`, so tests run
+  against the *installed* package, not loose files. Prevents "works because the
+  file happens to be in the cwd" bugs.
+* **Ruff** for linting + formatting — one fast tool replacing black + flake8 +
+  isort. Enforces style and catches bug-prone patterns (bugbear, comprehensions).
+* **pytest + coverage** — 21 tests, coverage gated at **85%** in
+  `pyproject.toml` (currently ~95%). The gate means new untested code fails CI,
+  not just looks bad in a report. `viz.py` is excluded from the gate (it's
+  exercised by the smoke run, and asserting on pixels is low-value).
+* **Security scanning** — two complementary tools: **bandit** (SAST over our own
+  code, looking for insecure patterns) and **pip-audit** (checks dependencies
+  against the CVE advisory DB). Both run in CI and as pre-commit hooks.
+* **GitHub Actions CI** — a `test` matrix across **Python 3.9–3.12** (this is
+  what actually proves the 3.9 floor we claim — see the `from __future__`
+  decision below) plus a `quality` job (ruff + bandit + pip-audit). Green checks
+  show on the public repo before anyone reads the code.
+* **pre-commit hooks** — ruff/bandit/whitespace run automatically before each
+  commit, so the same gates that run in CI run locally first. Fast feedback,
+  nothing broken ever gets pushed.
+
+### Why `from __future__ import annotations` is in every module
+
+This makes all type annotations **lazy** — Python stores them as strings instead
+of evaluating them at import time (PEP 563). Two concrete payoffs here:
+
+1. **Modern syntax on an old Python.** Ruff rewrote the hints to the modern
+   `list[int]` / `int | None` style (PEP 585 / 604). Evaluating that syntax at
+   runtime requires Python 3.10+. Because the future import turns annotations
+   into strings, they're never evaluated — so the modern syntax runs fine on our
+   declared floor of **Python 3.9**. It's what lets us have modern-looking code
+   *and* broad compatibility at the same time (the CI matrix proves it).
+2. **Forward references for free** — a function can reference a type defined
+   later in the file without quoting it, and there's a tiny import-time speedup
+   since annotations aren't constructed.
+
+Trade-off: if we ever did runtime introspection of annotations (e.g. a
+serializer using `get_type_hints`), we'd need to resolve the strings. We don't,
+so this is pure upside. The alternative would be to bump the project to
+Python 3.10+ and drop the imports — but supporting 3.9 costs nothing here and is
+more portable for whoever runs the takehome.
+
+---
+
+## 9. Changelog of decisions
 
 * **v0.1 (first pass):** core engine, LOOK movement, `nearest_car` (default) +
   `round_robin`, full stats + CSV outputs, test suite. Bonus schedulers and
@@ -283,3 +333,9 @@ the "fairness vs efficiency" bonus and makes for a compelling demo.
   wait/total histograms. The sample run surfaces a bimodal wait distribution
   (lucky vs. mid-rush-starved passengers) — concrete fodder for the
   fairness-vs-efficiency discussion. Bonus schedulers still pending.
+* **v0.3:** added engineering tooling — Ruff (lint+format), pytest coverage gate
+  (85%), bandit + pip-audit security scanning, GitHub Actions CI (Python
+  3.9–3.12 matrix + quality job), and pre-commit hooks. Added tests for io/stats/
+  CLI to lift coverage to ~95%. Modernized type-hint syntax (kept
+  `from __future__ import annotations` so it still runs on 3.9). Bonus schedulers
+  still pending.

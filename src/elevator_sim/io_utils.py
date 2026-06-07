@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import csv
-from typing import List
 
 from .models import Request
 
 
-def load_requests(path: str) -> List[Request]:
+def load_requests(path: str) -> list[Request]:
     """Load requests from a CSV with header ``time,id,source,dest``.
 
     Rows are returned sorted by time so the engine can release them in order;
     the engine itself still only ever reads requests for the current tick.
     """
-    requests: List[Request] = []
+    requests: list[Request] = []
     with open(path, newline="") as fh:
         reader = csv.DictReader(fh)
         required = {"time", "id", "source", "dest"}

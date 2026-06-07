@@ -16,7 +16,15 @@ elevator-sim = "elevator_sim.cli:main"
 
 [dependency-groups]
 # Everything needed for development/tests/plots: `uv sync` installs these.
-dev = ["pytest>=7.0", "matplotlib>=3.5"]
+dev = [
+    "pytest>=7.0",
+    "matplotlib>=3.5",
+    "ruff>=0.15.16",
+    "pytest-cov>=7.1.0",
+    "pre-commit>=4.3.0",
+    "bandit>=1.8.6",
+    "pip-audit>=2.9.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -28,3 +36,23 @@ packages = ["src/elevator_sim"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+addopts = "--cov=elevator_sim --cov-report=term-missing --cov-fail-under=85"
+
+[tool.coverage.run]
+source = ["elevator_sim"]
+# viz.py is exercised in the smoke run, not unit tests; exclude from the gate.
+omit = ["*/viz.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import-sort, UP pyupgrade, B bugbear,
+# SIM simplify, C4 comprehensions.
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "C4"]
+
+[tool.bandit]
+# Scan application code only; tests legitimately use asserts (B101).
+exclude_dirs = ["tests"]

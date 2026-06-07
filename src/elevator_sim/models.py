@@ -20,7 +20,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import List, Optional, Set
 
 
 class Direction(IntEnum):
@@ -46,9 +45,7 @@ class Request:
 
     def __post_init__(self) -> None:
         if self.source == self.dest:
-            raise ValueError(
-                f"request {self.id}: source and dest must differ (both {self.source})"
-            )
+            raise ValueError(f"request {self.id}: source and dest must differ (both {self.source})")
         if self.time < 0:
             raise ValueError(f"request {self.id}: time must be non-negative")
 
@@ -70,9 +67,9 @@ class Passenger:
     """
 
     request: Request
-    pickup_time: Optional[int] = None
-    dropoff_time: Optional[int] = None
-    assigned_elevator: Optional[int] = None
+    pickup_time: int | None = None
+    dropoff_time: int | None = None
+    assigned_elevator: int | None = None
 
     @property
     def id(self) -> str:
@@ -91,21 +88,21 @@ class Passenger:
         return self.request.time
 
     @property
-    def wait_time(self) -> Optional[int]:
+    def wait_time(self) -> int | None:
         """Ticks between requesting and being picked up."""
         if self.pickup_time is None:
             return None
         return self.pickup_time - self.request_time
 
     @property
-    def travel_time(self) -> Optional[int]:
+    def travel_time(self) -> int | None:
         """Ticks spent on board, from pickup to drop-off."""
         if self.pickup_time is None or self.dropoff_time is None:
             return None
         return self.dropoff_time - self.pickup_time
 
     @property
-    def total_time(self) -> Optional[int]:
+    def total_time(self) -> int | None:
         """wait_time + travel_time; the metric the brief asks us to minimise."""
         if self.wait_time is None or self.travel_time is None:
             return None
@@ -140,9 +137,9 @@ class Elevator:
     direction: Direction = Direction.IDLE
 
     # Passengers physically aboard the car.
-    onboard: List[Passenger] = field(default_factory=list)
+    onboard: list[Passenger] = field(default_factory=list)
     # Passengers assigned to this car but still waiting at their source floor.
-    waiting: List[Passenger] = field(default_factory=list)
+    waiting: list[Passenger] = field(default_factory=list)
 
     # --- introspection -------------------------------------------------
 
@@ -157,13 +154,13 @@ class Elevator:
     def has_work(self) -> bool:
         return bool(self.onboard or self.waiting)
 
-    def dropoff_floors(self) -> Set[int]:
+    def dropoff_floors(self) -> set[int]:
         return {p.dest for p in self.onboard}
 
-    def pickup_floors(self) -> Set[int]:
+    def pickup_floors(self) -> set[int]:
         return {p.source for p in self.waiting}
 
-    def target_floors(self) -> Set[int]:
+    def target_floors(self) -> set[int]:
         """All floors this car must eventually visit."""
         return self.dropoff_floors() | self.pickup_floors()
 
@@ -180,11 +177,9 @@ class Elevator:
         """
         if self.current_floor in self.dropoff_floors():
             return True
-        if not self.is_full and self.current_floor in self.pickup_floors():
-            return True
-        return False
+        return bool(not self.is_full and self.current_floor in self.pickup_floors())
 
-    def next_move_target(self) -> Optional[int]:
+    def next_move_target(self) -> int | None:
         """The next floor to move toward (never the current floor).
 
         Implements the LOOK scan: prefer stops ahead in the current direction;

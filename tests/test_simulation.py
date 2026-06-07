@@ -17,6 +17,7 @@ def run(requests, **kwargs):
 
 # --- models --------------------------------------------------------------
 
+
 def test_request_rejects_equal_source_dest():
     with pytest.raises(ValueError):
         Request(time=0, id="x", source=3, dest=3)
@@ -42,6 +43,7 @@ def test_look_prefers_current_direction_then_reverses():
 
 
 # --- core objectives -----------------------------------------------------
+
 
 def test_every_passenger_is_eventually_delivered():
     requests = [
@@ -99,6 +101,7 @@ def test_simulation_is_deterministic():
 
 # --- statistics ----------------------------------------------------------
 
+
 def test_hand_computed_single_passenger_stats():
     # One car at floor 1; passenger requests at t=0 from 1 -> 5.
     # t0: car at 1, services (boards, dwell). pickup=0.
@@ -118,6 +121,7 @@ def test_hand_computed_single_passenger_stats():
 
 
 # --- schedulers ----------------------------------------------------------
+
 
 @pytest.mark.parametrize("scheduler", [NearestCarScheduler(), RoundRobinScheduler()])
 def test_all_schedulers_serve_everyone(scheduler):

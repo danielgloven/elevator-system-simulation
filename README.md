@@ -61,6 +61,20 @@ CLI options:
 uv run pytest -q
 ```
 
+### Development
+
+```bash
+uv run ruff check .            # lint
+uv run ruff format .           # auto-format
+uv run pytest -q               # tests + coverage (gated at 85%)
+uv run bandit -c pyproject.toml -r src   # security scan (code)
+uv run pip-audit               # security scan (dependencies)
+uv run pre-commit install      # run the above automatically on each commit
+```
+
+Continuous integration (GitHub Actions) runs the test suite across Python
+3.9–3.12 plus a lint + security job on every push.
+
 ## Input Format
 
 A CSV with a header row. Each subsequent row is one request:

@@ -8,7 +8,6 @@ this module never fails even when matplotlib isn't installed.
 from __future__ import annotations
 
 import os
-from typing import List
 
 from .simulation import SimulationResult
 from .stats import compute_statistics
@@ -57,7 +56,7 @@ def plot_passenger_times(result: SimulationResult, path: str) -> str:
     # Sort by total time so the chart reads as a clear distribution.
     delivered.sort(key=lambda p: p.total_time or 0)
 
-    ids: List[str] = [p.id for p in delivered]
+    ids: list[str] = [p.id for p in delivered]
     waits = [p.wait_time or 0 for p in delivered]
     travels = [p.travel_time or 0 for p in delivered]
     x = range(len(delivered))
@@ -68,8 +67,13 @@ def plot_passenger_times(result: SimulationResult, path: str) -> str:
 
     stats = compute_statistics(result)
     if stats.total is not None:
-        ax.axhline(stats.total.average, color="#333", linestyle="--",
-                   linewidth=1.2, label=f"avg total = {stats.total.average:.1f}")
+        ax.axhline(
+            stats.total.average,
+            color="#333",
+            linestyle="--",
+            linewidth=1.2,
+            label=f"avg total = {stats.total.average:.1f}",
+        )
 
     ax.set_title("Per-passenger time: wait + travel (sorted by total)")
     ax.set_xlabel("passenger")
@@ -114,7 +118,7 @@ def plot_wait_distribution(result: SimulationResult, path: str) -> str:
     return path
 
 
-def render_all(result: SimulationResult, output_dir: str) -> List[str]:
+def render_all(result: SimulationResult, output_dir: str) -> list[str]:
     """Write every chart into ``output_dir`` and return the paths written."""
     return [
         plot_elevator_paths(result, os.path.join(output_dir, "elevator_paths.png")),

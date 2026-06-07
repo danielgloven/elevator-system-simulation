@@ -5,9 +5,7 @@ from __future__ import annotations
 import csv
 import os
 from dataclasses import dataclass
-from typing import List, Optional
 
-from .models import Passenger
 from .simulation import SimulationResult
 
 
@@ -28,7 +26,7 @@ class MetricSummary:
         )
 
 
-def _summarise(label: str, values: List[int]) -> Optional[MetricSummary]:
+def _summarise(label: str, values: list[int]) -> MetricSummary | None:
     if not values:
         return None
     return MetricSummary(
@@ -44,14 +42,14 @@ def _summarise(label: str, values: List[int]) -> Optional[MetricSummary]:
 class Statistics:
     """Aggregate statistics plus a few notable observations."""
 
-    wait: Optional[MetricSummary]
-    travel: Optional[MetricSummary]
-    total: Optional[MetricSummary]
+    wait: MetricSummary | None
+    travel: MetricSummary | None
+    total: MetricSummary | None
     delivered: int
     requested: int
     ticks: int
-    longest_wait_passenger: Optional[str]
-    longest_total_passenger: Optional[str]
+    longest_wait_passenger: str | None
+    longest_total_passenger: str | None
 
     def render(self) -> str:
         lines = ["=" * 56, "PASSENGER SUMMARY STATISTICS", "=" * 56]
@@ -77,7 +75,7 @@ def compute_statistics(result: SimulationResult) -> Statistics:
     travels = [p.travel_time for p in delivered if p.travel_time is not None]
     totals = [p.total_time for p in delivered if p.total_time is not None]
 
-    def _worst(metric_name: str) -> Optional[str]:
+    def _worst(metric_name: str) -> str | None:
         if not delivered:
             return None
         worst = max(delivered, key=lambda p: getattr(p, metric_name) or 0)
@@ -116,17 +114,31 @@ def write_passenger_log(result: SimulationResult, path: str) -> None:
         writer = csv.writer(fh)
         writer.writerow(
             [
-                "id", "source", "dest", "assigned_elevator",
-                "request_time", "pickup_time", "dropoff_time",
-                "wait_time", "travel_time", "total_time",
+                "id",
+                "source",
+                "dest",
+                "assigned_elevator",
+                "request_time",
+                "pickup_time",
+                "dropoff_time",
+                "wait_time",
+                "travel_time",
+                "total_time",
             ]
         )
         for p in result.passengers:
             writer.writerow(
                 [
-                    p.id, p.source, p.dest, p.assigned_elevator,
-                    p.request_time, p.pickup_time, p.dropoff_time,
-                    p.wait_time, p.travel_time, p.total_time,
+                    p.id,
+                    p.source,
+                    p.dest,
+                    p.assigned_elevator,
+                    p.request_time,
+                    p.pickup_time,
+                    p.dropoff_time,
+                    p.wait_time,
+                    p.travel_time,
+                    p.total_time,
                 ]
             )
 

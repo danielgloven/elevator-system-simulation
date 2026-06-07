@@ -20,8 +20,6 @@ First-pass strategies:
 
 from __future__ import annotations
 
-from typing import Dict, List, Type
-
 from .models import Direction, Elevator, Passenger
 
 
@@ -30,7 +28,7 @@ class Scheduler:
 
     name: str = "base"
 
-    def assign(self, passenger: Passenger, elevators: List[Elevator], now: int) -> int:
+    def assign(self, passenger: Passenger, elevators: list[Elevator], now: int) -> int:
         """Return the id of the elevator to assign ``passenger`` to.
 
         Called exactly once per passenger, at the tick the request appears
@@ -63,7 +61,7 @@ class NearestCarScheduler(Scheduler):
     #: Weight of the load-balancing term, in "ticks per committed passenger".
     LOAD_PENALTY = 0.5
 
-    def assign(self, passenger: Passenger, elevators: List[Elevator], now: int) -> int:
+    def assign(self, passenger: Passenger, elevators: list[Elevator], now: int) -> int:
         best_id = elevators[0].id
         best_cost = float("inf")
         for elevator in elevators:
@@ -104,14 +102,14 @@ class RoundRobinScheduler(Scheduler):
     def __init__(self) -> None:
         self._next = 0
 
-    def assign(self, passenger: Passenger, elevators: List[Elevator], now: int) -> int:
+    def assign(self, passenger: Passenger, elevators: list[Elevator], now: int) -> int:
         chosen = elevators[self._next % len(elevators)]
         self._next += 1
         return chosen.id
 
 
 #: Registry of available strategies, keyed by name for CLI selection.
-SCHEDULERS: Dict[str, Type[Scheduler]] = {
+SCHEDULERS: dict[str, type[Scheduler]] = {
     NearestCarScheduler.name: NearestCarScheduler,
     RoundRobinScheduler.name: RoundRobinScheduler,
 }
