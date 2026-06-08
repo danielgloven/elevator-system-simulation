@@ -256,7 +256,7 @@ A short list (full detail in DECISIONS.md):
 
 ## Time Spent
 
-~2 hours.
+~4–5 hours.
 
 ## What I'd Improve With More Time
 
