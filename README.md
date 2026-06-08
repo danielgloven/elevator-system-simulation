@@ -19,6 +19,10 @@ The core simulation has **no third-party dependencies** and runs on **Python
 ### With uv (recommended)
 
 ```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# or: brew install uv
+
 uv sync                                   # create .venv + install dev deps
 uv run elevator-sim --requests data/requests.csv          # run
 uv run elevator-sim --requests data/requests.csv --plot   # run + charts
